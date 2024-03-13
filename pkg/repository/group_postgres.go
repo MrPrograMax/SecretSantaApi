@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"database/sql"
 	"fmt"
 	"github.com/jmoiron/sqlx"
 	"github.com/sirupsen/logrus"
@@ -36,12 +37,46 @@ func (r *GroupPostgres) GetAll() ([]testApi.Group, error) {
 	return groups, err
 }
 
-func (r *GroupPostgres) GetById(groupId int) (testApi.Group, error) {
+func (r *GroupPostgres) GetById(groupId int) (testApi.GroupDTO, error) {
+	var groupDTO testApi.GroupDTO
+
 	var group testApi.Group
 	query := fmt.Sprintf(`SELECT * FROM %s g WHERE g.id = $1`, groupsTable)
-
 	err := r.db.Get(&group, query, groupId)
-	return group, err
+
+	var participants []testApi.ParticipantDTO
+
+	testQuery := fmt.Sprintf("SELECT p.id, p.name, p.wish, pr.id, pr.name, pr.wish FROM %s p LEFT JOIN %s gpl on p.id = gpl.id LEFT JOIN %s pr on p.recipient_id = pr.id WHERE gpl.group_id = $1", participantsTable, groupsParticipantsListsTable, participantsTable)
+	rows, err := r.db.Query(testQuery, groupId)
+
+	for rows.Next() {
+		var p testApi.ParticipantDTO
+		var recipientId sql.NullInt64
+		var recipientName, recipientWish sql.NullString
+
+		if err := rows.Scan(&p.Id, &p.Name, &p.Wish, &recipientId, &recipientName, &recipientWish); err != nil {
+			return groupDTO, err
+		}
+
+		if int(recipientId.Int64) == 0 {
+			p.Recipient = nil
+		} else if recipientId.Valid || recipientName.Valid || recipientWish.Valid {
+			p.Recipient = &testApi.RecipientDTO{
+				Id:   int(recipientId.Int64),
+				Name: recipientName.String,
+				Wish: recipientWish.String,
+			}
+		}
+
+		participants = append(participants, p)
+	}
+
+	groupDTO = testApi.GroupDTO{
+		Group:        group,
+		Participants: participants,
+	}
+
+	return groupDTO, err
 }
 
 func (r *GroupPostgres) Delete(groupId int) error {
@@ -50,6 +85,7 @@ func (r *GroupPostgres) Delete(groupId int) error {
 	_, err := r.db.Exec(query, groupId)
 	return err
 }
+
 func (r *GroupPostgres) Update(groupId int, input testApi.UpdateGroupInput) error {
 	setValues := make([]string, 0)
 	args := make([]interface{}, 0)

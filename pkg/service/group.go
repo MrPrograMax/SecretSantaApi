@@ -21,7 +21,7 @@ func (s *GroupService) GetAll() ([]testApi.Group, error) {
 	return s.repo.GetAll()
 }
 
-func (s *GroupService) GetById(groupId int) (testApi.Group, error) {
+func (s *GroupService) GetById(groupId int) (testApi.GroupDTO, error) {
 	return s.repo.GetById(groupId)
 }
 
