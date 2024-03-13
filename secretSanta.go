@@ -8,6 +8,11 @@ type Group struct {
 	Description string `json:"description" db:"description"`
 }
 
+type GroupDTO struct {
+	Group
+	Participants []ParticipantDTO
+}
+
 type GroupsList struct {
 	Id            int
 	GroupId       int
@@ -15,10 +20,23 @@ type GroupsList struct {
 }
 
 type Participant struct {
-	Id          int    `json:"id"`
-	Name        string `json:"name"`
-	Wish        string `json:"wish"`
-	RecipientId int    `json:"recipient_id"`
+	Id          int    `json:"id" db:"id"`
+	Name        string `json:"name" db:"name" binding:"required"`
+	Wish        string `json:"wish" db:"wish"`
+	RecipientId int    `json:"recipientId" db:"recipient_id"`
+}
+
+type ParticipantDTO struct {
+	Id        int           `json:"id"`
+	Name      string        `json:"name"`
+	Wish      string        `json:"wish"`
+	Recipient *RecipientDTO `json:"recipient"`
+}
+
+type RecipientDTO struct {
+	Id   int    `json:"recipient_id"`
+	Name string `json:"recipient_name"`
+	Wish string `json:"recipient_wish"`
 }
 
 type UpdateGroupInput struct {
