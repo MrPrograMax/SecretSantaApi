@@ -24,9 +24,8 @@ func (s ParticipantService) Create(groupId int, participant testApi.Participant)
 	return s.repo.Create(groupId, participant)
 }
 
-func (s ParticipantService) Toss() {
-	//TODO implement me
-	panic("implement me")
+func (s ParticipantService) Toss(groupId int) ([]testApi.ParticipantDTO, error) {
+	return s.repo.Toss(groupId)
 }
 
 func (s ParticipantService) GetRecipientInfo(groupId, participantId int) (testApi.RecipientDTO, error) {

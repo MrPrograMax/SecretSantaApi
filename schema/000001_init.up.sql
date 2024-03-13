@@ -10,7 +10,7 @@ CREATE TABLE participants
     id           serial       not null unique,
     name         varchar(255) not null,
     wish         varchar(255),
-    recipient_id int references participants (id) unique
+    recipient_id int references participants (id) on delete cascade unique
 );
 
 CREATE TABLE groups_list

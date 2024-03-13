@@ -17,6 +17,7 @@ type Participant interface {
 	Create(groupId int, item testApi.Participant) (int, error)
 	Delete(groupId, participantId int) error
 	GetRecipientInfo(groupId, participantId int) (testApi.RecipientDTO, error)
+	Toss(groupId int) ([]testApi.ParticipantDTO, error)
 }
 
 type Service struct {

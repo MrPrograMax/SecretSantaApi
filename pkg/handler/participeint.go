@@ -30,8 +30,20 @@ func (h *Handler) createParticipant(c *gin.Context) {
 }
 
 func (h *Handler) tossParticipant(c *gin.Context) {
+	groupId, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		newErrorResponse(c, http.StatusBadRequest, "invalid group param")
+		return
+	}
 
-} //Провести жеребьевку
+	participants, err := h.services.Participant.Toss(groupId)
+	if err != nil {
+		newErrorResponse(c, http.StatusConflict, err.Error())
+		return
+	}
+
+	c.JSON(http.StatusOK, participants)
+}
 
 func (h *Handler) getInfoAboutRecipient(c *gin.Context) {
 	groupId, err := strconv.Atoi(c.Param("id"))

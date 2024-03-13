@@ -30,9 +30,7 @@ func (h *Handler) InitRoutes() *gin.Engine {
 			items.POST("/:id/toss", h.tossParticipant)
 			items.DELETE("/:id/participant/:participantId", h.deleteParticipant)
 			items.GET("/:id/participant/:participantId/recipient", h.getInfoAboutRecipient)
-
 		}
-
 	}
 
 	return router
