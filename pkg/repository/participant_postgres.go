@@ -103,55 +103,25 @@ func (r *ParticipantPostgres) Toss(groupId int) ([]testApi.ParticipantDTO, error
 		return participants, errors.New("Count of participants less then 2")
 	}
 
-	flag, err := GetRecipients(r.db, groupId, idListOfParticipants)
-	if err != nil {
-		tx.Rollback()
-		return participants, err
-	}
-
-	if !flag {
-		flag, err = GetRecipients(r.db, groupId, idListOfParticipants)
+	flag := false
+	for !flag {
+		flag, err = Shuffle(r.db, groupId, idListOfParticipants)
 		if err != nil {
 			tx.Rollback()
 			return participants, err
 		}
 	}
 
-	testQuery := fmt.Sprintf("SELECT p.id, p.name, p.wish, pr.id, pr.name, pr.wish FROM %s p LEFT JOIN %s gpl on p.id = gpl.id LEFT JOIN %s pr on p.recipient_id = pr.id WHERE gpl.group_id = $1", participantsTable, groupsParticipantsListsTable, participantsTable)
-	rows, err := r.db.Query(testQuery, groupId)
-
+	participants, err = GetParticipants(r.db, groupId, participants)
 	if err != nil {
 		tx.Rollback()
 		return participants, err
 	}
 
-	for rows.Next() {
-		var p testApi.ParticipantDTO
-		var recipientId sql.NullInt64
-		var recipientName, recipientWish sql.NullString
-
-		if err := rows.Scan(&p.Id, &p.Name, &p.Wish, &recipientId, &recipientName, &recipientWish); err != nil {
-			tx.Rollback()
-			return participants, err
-		}
-
-		if int(recipientId.Int64) == 0 {
-			p.Recipient = nil
-		} else if recipientId.Valid || recipientName.Valid || recipientWish.Valid {
-			p.Recipient = &testApi.RecipientDTO{
-				Id:   int(recipientId.Int64),
-				Name: recipientName.String,
-				Wish: recipientWish.String,
-			}
-		}
-
-		participants = append(participants, p)
-	}
-
 	return participants, tx.Commit()
 }
 
-func GetRecipients(db *sqlx.DB, groupId int, idListOfParticipants []int) (bool, error) {
+func Shuffle(db *sqlx.DB, groupId int, idListOfParticipants []int) (bool, error) {
 	freeParticipants := make([]int, len(idListOfParticipants))
 	copy(freeParticipants, idListOfParticipants)
 
@@ -188,4 +158,38 @@ func GetRecipients(db *sqlx.DB, groupId int, idListOfParticipants []int) (bool, 
 	}
 
 	return true, nil
+}
+
+func GetParticipants(db *sqlx.DB, groupId int, participants []testApi.ParticipantDTO) ([]testApi.ParticipantDTO, error) {
+
+	testQuery := fmt.Sprintf("SELECT p.id, p.name, p.wish, pr.id, pr.name, pr.wish FROM %s p LEFT JOIN %s gpl on p.id = gpl.id LEFT JOIN %s pr on p.recipient_id = pr.id WHERE gpl.group_id = $1", participantsTable, groupsParticipantsListsTable, participantsTable)
+	rows, err := db.Query(testQuery, groupId)
+
+	if err != nil {
+		return participants, err
+	}
+
+	for rows.Next() {
+		var p testApi.ParticipantDTO
+		var recipientId sql.NullInt64
+		var recipientName, recipientWish sql.NullString
+
+		if err := rows.Scan(&p.Id, &p.Name, &p.Wish, &recipientId, &recipientName, &recipientWish); err != nil {
+			return participants, err
+		}
+
+		if int(recipientId.Int64) == 0 {
+			p.Recipient = nil
+		} else if recipientId.Valid || recipientName.Valid || recipientWish.Valid {
+			p.Recipient = &testApi.RecipientDTO{
+				Id:   int(recipientId.Int64),
+				Name: recipientName.String,
+				Wish: recipientWish.String,
+			}
+		}
+
+		participants = append(participants, p)
+	}
+
+	return participants, nil
 }
