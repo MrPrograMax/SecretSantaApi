@@ -86,8 +86,6 @@ func (r *ParticipantPostgres) GetRecipientInfo(groupId, participantId int) (test
 
 func (r *ParticipantPostgres) Toss(groupId int) ([]testApi.ParticipantDTO, error) {
 	tx, err := r.db.Begin()
-	src := rand.NewSource(rand.Uint64())
-	rng := rand.New(src)
 
 	var participants []testApi.ParticipantDTO
 
@@ -105,32 +103,18 @@ func (r *ParticipantPostgres) Toss(groupId int) ([]testApi.ParticipantDTO, error
 		return participants, errors.New("Count of participants less then 2")
 	}
 
-	query = fmt.Sprintf("UPDATE %s SET recipient_id = null WHERE id IN (SELECT participant_id FROM %s WHERE group_id = $1)", participantsTable, groupsParticipantsListsTable)
-	_, err = r.db.Exec(query, groupId)
-
+	flag, err := GetRecipients(r.db, groupId, idListOfParticipants)
 	if err != nil {
 		tx.Rollback()
 		return participants, err
 	}
 
-	freeParticipants := make([]int, len(idListOfParticipants))
-	copy(freeParticipants, idListOfParticipants)
-
-	for i := 0; i < len(idListOfParticipants); i++ {
-		randomNumber := rng.Intn(len(freeParticipants))
-		for idListOfParticipants[i] == freeParticipants[randomNumber] {
-			randomNumber = rng.Intn(len(freeParticipants))
-		}
-
-		query = fmt.Sprintf("UPDATE %s SET recipient_id = $1 WHERE id = $2", participantsTable)
-		_, err := r.db.Exec(query, freeParticipants[randomNumber], idListOfParticipants[i])
-
+	if !flag {
+		flag, err = GetRecipients(r.db, groupId, idListOfParticipants)
 		if err != nil {
 			tx.Rollback()
 			return participants, err
 		}
-
-		freeParticipants = append(freeParticipants[:randomNumber], freeParticipants[randomNumber+1:]...)
 	}
 
 	testQuery := fmt.Sprintf("SELECT p.id, p.name, p.wish, pr.id, pr.name, pr.wish FROM %s p LEFT JOIN %s gpl on p.id = gpl.id LEFT JOIN %s pr on p.recipient_id = pr.id WHERE gpl.group_id = $1", participantsTable, groupsParticipantsListsTable, participantsTable)
@@ -165,4 +149,43 @@ func (r *ParticipantPostgres) Toss(groupId int) ([]testApi.ParticipantDTO, error
 	}
 
 	return participants, tx.Commit()
+}
+
+func GetRecipients(db *sqlx.DB, groupId int, idListOfParticipants []int) (bool, error) {
+	freeParticipants := make([]int, len(idListOfParticipants))
+	copy(freeParticipants, idListOfParticipants)
+
+	src := rand.NewSource(rand.Uint64())
+	rng := rand.New(src)
+
+	query := fmt.Sprintf("UPDATE %s SET recipient_id = null WHERE id IN (SELECT participant_id FROM %s WHERE group_id = $1)", participantsTable, groupsParticipantsListsTable)
+	_, err := db.Exec(query, groupId)
+
+	if err != nil {
+		return false, err
+	}
+
+	count := 0
+	for i := 0; i < len(idListOfParticipants); i++ {
+		randomNumber := rng.Intn(len(freeParticipants))
+		for idListOfParticipants[i] == freeParticipants[randomNumber] {
+			randomNumber = rng.Intn(len(freeParticipants))
+
+			count++
+			if count == 10 {
+				return false, nil
+			}
+		}
+
+		query = fmt.Sprintf("UPDATE %s SET recipient_id = $1 WHERE id = $2", participantsTable)
+		_, err := db.Exec(query, freeParticipants[randomNumber], idListOfParticipants[i])
+
+		if err != nil {
+			return false, err
+		}
+
+		freeParticipants = append(freeParticipants[:randomNumber], freeParticipants[randomNumber+1:]...)
+	}
+
+	return true, nil
 }
