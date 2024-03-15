@@ -28,16 +28,18 @@ func (r *ParticipantPostgres) Create(groupId int, item testApi.Participant) (int
 
 	row := tx.QueryRow(createParticipantQuery, item.Name, item.Wish)
 	err = row.Scan(&participantId)
+
 	if err != nil {
 		tx.Rollback()
-		return 0, err
+		return 0, errors.New("error of create participant")
 	}
 
 	createGroupParticipantsQuery := fmt.Sprintf("INSERT INTO %s (group_id, participant_id) VALUES ($1, $2)", groupsParticipantsListsTable)
 	_, err = tx.Exec(createGroupParticipantsQuery, groupId, participantId)
+
 	if err != nil {
 		tx.Rollback()
-		return 0, err
+		return 0, errors.New("error of add participant in group")
 	}
 
 	return participantId, tx.Commit()
@@ -105,7 +107,7 @@ func (r *ParticipantPostgres) Toss(groupId int) ([]testApi.ParticipantDTO, error
 
 	flag := false
 	for !flag {
-		flag, err = Shuffle(r.db, groupId, idListOfParticipants)
+		flag, err = shuffle(r.db, groupId, idListOfParticipants)
 		if err != nil {
 			tx.Rollback()
 			return participants, err
@@ -121,7 +123,7 @@ func (r *ParticipantPostgres) Toss(groupId int) ([]testApi.ParticipantDTO, error
 	return participants, tx.Commit()
 }
 
-func Shuffle(db *sqlx.DB, groupId int, idListOfParticipants []int) (bool, error) {
+func shuffle(db *sqlx.DB, groupId int, idListOfParticipants []int) (bool, error) {
 	freeParticipants := make([]int, len(idListOfParticipants))
 	copy(freeParticipants, idListOfParticipants)
 

@@ -10,12 +10,12 @@ import (
 func (h *Handler) createParticipant(c *gin.Context) {
 	groupId, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		newErrorResponse(c, http.StatusBadRequest, "invalid group param")
+		newErrorResponse(c, http.StatusBadRequest, "Invalid group param")
 		return
 	}
 	var input testApi.Participant
 	if err := c.BindJSON(&input); err != nil {
-		newErrorResponse(c, http.StatusBadRequest, err.Error())
+		newErrorResponse(c, http.StatusBadRequest, "Invalid input")
 	}
 
 	id, err := h.services.Participant.Create(groupId, input)
@@ -32,7 +32,7 @@ func (h *Handler) createParticipant(c *gin.Context) {
 func (h *Handler) tossParticipant(c *gin.Context) {
 	groupId, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		newErrorResponse(c, http.StatusBadRequest, "invalid group param")
+		newErrorResponse(c, http.StatusBadRequest, "Invalid group param")
 		return
 	}
 
@@ -48,13 +48,13 @@ func (h *Handler) tossParticipant(c *gin.Context) {
 func (h *Handler) getInfoAboutRecipient(c *gin.Context) {
 	groupId, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		newErrorResponse(c, http.StatusInternalServerError, "invalid Group Id param")
+		newErrorResponse(c, http.StatusBadRequest, "Invalid Group Id param")
 		return
 	}
 
 	participantId, err := strconv.Atoi(c.Param("participantId"))
 	if err != nil {
-		newErrorResponse(c, http.StatusInternalServerError, "invalid Participant Id param")
+		newErrorResponse(c, http.StatusBadRequest, "Invalid Participant Id param")
 		return
 	}
 
@@ -70,13 +70,13 @@ func (h *Handler) getInfoAboutRecipient(c *gin.Context) {
 func (h *Handler) deleteParticipant(c *gin.Context) {
 	groupId, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		newErrorResponse(c, http.StatusInternalServerError, "invalid group ID param")
+		newErrorResponse(c, http.StatusBadRequest, "Invalid group ID param")
 		return
 	}
 
 	participantId, err := strconv.Atoi(c.Param("participantId"))
 	if err != nil {
-		newErrorResponse(c, http.StatusInternalServerError, "invalid participant ID param")
+		newErrorResponse(c, http.StatusBadRequest, "Invalid participant ID param")
 		return
 	}
 
