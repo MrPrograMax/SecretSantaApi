@@ -1,0 +1,9 @@
+basePath: /
+host: localhost:8080
+info:
+  contact: {}
+  description: API Server for Secret Santa game
+  title: Secret Santa API
+  version: "1.0"
+paths: {}
+swagger: "2.0"
